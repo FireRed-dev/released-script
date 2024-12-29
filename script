@@ -1,0 +1,574 @@
+if game.PlaceId == 662417684 then
+	local Luna = loadstring(game:HttpGet("https://raw.githubusercontent.com/Nebula-Softworks/Luna-Interface-Suite/refs/heads/main/source.lua", true))()
+
+local Window = Luna:CreateWindow({
+	Name = "Cosmix Scripts | LUCKY BLOCKS Battleground", -- This Is Title Of Your Window
+	Subtitle = nil, -- A Gray Subtitle next To the main title.
+	LogoID = "82795327169782", -- The Asset ID of your logo. Set to nil if you do not have a logo for Luna to use.
+	LoadingEnabled = true, -- Whether to enable the loading animation. Set to false if you do not want the loading screen or have your own custom one.
+	LoadingTitle = "Cosmix Scripts", -- Header for loading screen
+	LoadingSubtitle = "By FireRed", -- Subtitle for loading screen
+
+	KeySystem = false, -- As Of Beta 6, Luna Has officially Implemented A Key System!
+	KeySettings = {
+		Title = "Cosmix Scripts Key System",
+		Subtitle = "Key System",
+		SaveInRoot = false, -- Enabling will save the key in your RootFolder (YOU MUST HAVE ONE BEFORE ENABLING THIS OPTION)
+		SaveKey = true, -- The user's key will be saved, but if you change the key, they will be unable to use your script
+		Key = {"Example Key"}, -- List of keys that will be accepted by the system, please use a system like Pelican or Luarmor that provide key strings based on your HWID since putting a simple string is very easy to bypass
+		SecondAction = {
+			Enabled = true, -- Set to false if you do not want a second action,
+			Type = "Link", -- Link / Discord.
+			Parameter = "" -- If Type is Discord, then put your invite link (DO NOT PUT DISCORD.GG/). Else, put the full link of your key system here.
+		}
+	}
+})
+
+local Tab = Window:CreateTab({
+	Name = "Home",
+	Icon = "house",
+	ImageSource = "Material",
+	ShowTitle = true -- This will determine whether the big header text in the tab will show
+})
+
+local Slider = Tab:CreateSlider({
+	Name = "WalkSpeed Slider",
+	Range = {17, 300},
+	Increment = 5,
+	CurrentValue = 16,
+	Callback = function(Value)
+		local player = game.Players.LocalPlayer
+		local character = player.Character or player.CharacterAdded:Wait()
+		
+		if character then
+			local humanoid = character:FindFirstChild("Humanoid")
+			if humanoid then
+				humanoid.WalkSpeed = Value
+			end
+		end
+	end
+}, "WalkSpeedSlider")
+
+
+local JumpPowerSlider = Tab:CreateSlider({
+	Name = "JumpPower Slider",
+	Range = {50, 200},
+	Increment = 10,
+	CurrentValue = 50,
+	Callback = function(Value)
+		local player = game.Players.LocalPlayer
+		local character = player.Character or player.CharacterAdded:Wait()
+
+		if character then
+			local humanoid = character:FindFirstChild("Humanoid")
+			if humanoid then
+				humanoid.JumpPower = Value
+			end
+		end
+	end
+}, "JumpPowerSlider")
+
+
+local Toggle = Tab:CreateToggle({
+	Name = "Toggle ESP",
+	Description = "Enable or disable ESP",
+	CurrentValue = false,
+	Callback = function(Value)
+		getgenv().ESPEnabled = Value
+		if getgenv().ESPEnabled then
+			spawn(function()
+				while getgenv().ESPEnabled do
+					for _, player in ipairs(game.Players:GetPlayers()) do
+						if player ~= game.Players.LocalPlayer and player.Character then
+							local espBox = player.Character:FindFirstChild("ESPBox")
+							if not espBox then
+								espBox = Instance.new("BoxHandleAdornment")
+								espBox.Name = "ESPBox"
+								espBox.Size = Vector3.new(4, 6, 4)
+								espBox.Adornee = player.Character:FindFirstChild("HumanoidRootPart")
+								espBox.AlwaysOnTop = true
+								espBox.ZIndex = 5
+								espBox.Color3 = Color3.new(1, 0, 0)
+								espBox.Parent = player.Character
+							end
+						end
+					end
+					wait(0.5)
+				end
+			end)
+		else
+			for _, player in ipairs(game.Players:GetPlayers()) do
+				if player.Character then
+					for _, adornment in ipairs(player.Character:GetChildren()) do
+						if adornment:IsA("BoxHandleAdornment") and adornment.Name == "ESPBox" then
+							adornment:Destroy()
+						end
+					end
+				end
+			end
+		end
+	end
+})
+
+local Button = Tab:CreateButton({
+	Name = "Fly - E to Activate",
+	Description = nil, -- Creates A Description For Users to know what the button does (looks bad if you use it all the time),
+    	Callback = function()
+			loadstring(game:HttpGet("https://pastefy.app/2fwf9UMf/raw"))()
+    	end
+})
+
+local Button = Tab:CreateButton({
+	Name = "Noclip - N to Activate",
+	Description = nil, -- Creates A Description For Users to know what the button does (looks bad if you use it all the time),
+    	Callback = function()
+			loadstring(game:HttpGet("https://pastefy.app/PE10yFqm/raw"))()
+    	end
+})
+
+local Toggle = Tab:CreateToggle({
+    Name = "Prevent Enemy Base Teleportation (Reworked And Functional)",
+    Description = "Bypass enemy base teleportation.",
+    CurrentValue = false,
+    Callback = function(Value)
+        if Value then
+            startDetection()
+        else
+            stopDetection()
+        end
+    end
+}, "PreventTeleportToggle")
+
+local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+local humanoid = character:WaitForChild("Humanoid")
+local camera = workspace.CurrentCamera
+local maxAllowedDistance = 20
+local checkInterval = 0.1
+local lastPosition = humanoidRootPart.Position
+local lastOrientation = humanoidRootPart.CFrame.LookVector
+local detectionRunning = false
+local detectionConnection
+
+
+function startDetection()
+    if detectionRunning then return end
+    detectionRunning = true
+    lastPosition = humanoidRootPart.Position
+
+    detectionConnection = game:GetService("RunService").Heartbeat:Connect(function()
+       
+        character = player.Character or player.CharacterAdded:Wait()
+        humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+        humanoid = character:FindFirstChild("Humanoid")
+        
+        if humanoidRootPart and humanoid then
+            local currentPosition = humanoidRootPart.Position
+            local distanceMoved = (currentPosition - lastPosition).Magnitude
+
+            if distanceMoved > maxAllowedDistance then
+                
+                warn("Teleportation detected! Resetting position.")
+                
+                
+                humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+                
+                
+                humanoidRootPart.CFrame = CFrame.new(lastPosition) * CFrame.Angles(0, humanoidRootPart.CFrame:ToEulerAnglesYXZ())
+                
+                
+                camera.CFrame = CFrame.new(camera.CFrame.Position, camera.CFrame.Position + lastOrientation)
+                
+                task.delay(0.1, function()
+                    humanoid:ChangeState(Enum.HumanoidStateType.Running)
+                end)
+            else
+                lastPosition = currentPosition
+                lastOrientation = humanoidRootPart.CFrame.LookVector
+            end
+        end
+    end)
+end
+
+function stopDetection()
+    if not detectionRunning then return end -- If it's not running, do nothing
+    detectionRunning = false
+    if detectionConnection then
+        detectionConnection:Disconnect() -- Disconnect the loop
+        detectionConnection = nil
+    end
+end
+
+
+
+local Tab = Window:CreateTab({
+	Name = "Block Spawner",
+	Icon = "code",
+	ImageSource = "Material",
+	ShowTitle = true -- This will determine whether the big header text in the tab will show
+})
+
+local Button = Tab:CreateButton({
+	Name = "Spawn Diamond Block",
+	Description = nil, -- Creates A Description For Users to know what the button does (looks bad if you use it all the time),
+    	Callback = function()
+			game:GetService("ReplicatedStorage").SpawnDiamondBlock:FireServer()
+    	end
+})
+
+local Button = Tab:CreateButton({
+	Name = "Spawn Lucky Block",
+	Description = nil, -- Creates A Description For Users to know what the button does (looks bad if you use it all the time),
+    	Callback = function()
+			game:GetService("ReplicatedStorage").SpawnLuckyBlock:FireServer()
+    	end
+})
+
+local Button = Tab:CreateButton({
+	Name = "Spawn Rainbow Block",
+	Description = nil, -- Creates A Description For Users to know what the button does (looks bad if you use it all the time),
+    	Callback = function()
+			game:GetService("ReplicatedStorage").SpawnRainbowBlock:FireServer()
+    	end
+})
+
+local Button = Tab:CreateButton({
+	Name = "Spawn Galaxy Block",
+	Description = nil, -- Creates A Description For Users to know what the button does (looks bad if you use it all the time),
+    	Callback = function()
+			game:GetService("ReplicatedStorage").SpawnGalaxyBlock:FireServer()
+    	end
+})
+
+local Button = Tab:CreateButton({
+	Name = "Spawn Super Block",
+	Description = nil, -- Creates A Description For Users to know what the button does (looks bad if you use it all the time),
+    	Callback = function()
+			game:GetService("ReplicatedStorage").SpawnSuperBlock:FireServer()
+    	end
+})
+
+
+local Button = Tab:CreateButton({
+	Name = "Spawn All Blocks",
+	Description = nil, -- Creates A Description For Users to know what the button does (looks bad if you use it all the time),
+    	Callback = function()
+			game:GetService("ReplicatedStorage").SpawnDiamondBlock:FireServer()
+game:GetService("ReplicatedStorage").SpawnLuckyBlock:FireServer()
+game:GetService("ReplicatedStorage").SpawnRainbowBlock:FireServer()
+game:GetService("ReplicatedStorage").SpawnGalaxyBlock:FireServer()
+game:GetService("ReplicatedStorage").SpawnRainbowBlock.SpawnSuperBlock:FireServer()
+
+    	end
+})
+
+local Button = Tab:CreateButton({
+	Name = "Spawn Every Item In the game",
+	Description = nil, -- Creates A Description For Users to know what the button does (looks bad if you use it all the time),
+    	Callback = function()
+			loadstring(game:HttpGet("https://pastefy.app/OdhuJB49/raw"))()
+    	end
+})
+
+
+local Tab = Window:CreateTab({
+	Name = "Aimbot",
+	Icon = "loupe",
+	ImageSource = "Material",
+	ShowTitle = true -- This will determine whether the big header text in the tab will show
+})
+
+local Button = Tab:CreateButton({
+	Name = "Turn On Aimbot - Q",
+	Description = nil, -- Creates A Description For Users to know what the button does (looks bad if you use it all the time),
+    	Callback = function()
+			loadstring(game:HttpGet("https://pastefy.app/Jj0nMC7u/raw"))()
+    	end
+})
+
+local Slider = Tab:CreateSlider({
+	Name = "Aimbot Sensitivity",
+	Range = {0, 100},
+	Increment = 1,
+	CurrentValue = 50,
+	Callback = function(Value)
+		getgenv().AimbotSensitivity = Value / 100
+	end
+})
+
+local Tab = Window:CreateTab({
+	Name = "Legit Tab",
+	Icon = "check_circle",
+	ImageSource = "Material",
+	ShowTitle = true -- This will determine whether the big header text in the tab will show
+})
+
+local Button = Tab:CreateButton({
+	Name = "Destroy All Tools",
+	Description = nil, -- Creates A Description For Users to know what the button does (looks bad if you use it all the time),
+	Callback = function()
+		local player = game.Players.LocalPlayer
+		local backpack = player:FindFirstChild("Backpack")
+		
+		if backpack then
+			for _, tool in ipairs(backpack:GetChildren()) do
+				if tool:IsA("Tool") then
+					tool:Destroy()
+				end
+			end
+		end
+
+	end
+})
+
+local Button = Tab:CreateButton({
+	Name = "Panic",
+	Description = nil, -- Creates A Description For Users to know what the button does (looks bad if you use it all the time),
+    	Callback = function()
+            Luna:Destroy()
+    	end
+})
+
+print("Script Succesfully Loaded !")
+
+else
+	local Luna = loadstring(game:HttpGet("https://raw.githubusercontent.com/Nebula-Softworks/Luna-Interface-Suite/refs/heads/main/source.lua", true))()
+
+	local Window = Luna:CreateWindow({
+		Name = "Cosmix Scripts | Universal", -- This Is Title Of Your Window
+		Subtitle = nil, -- A Gray Subtitle next To the main title.
+		LogoID = "82795327169782", -- The Asset ID of your logo. Set to nil if you do not have a logo for Luna to use.
+		LoadingEnabled = true, -- Whether to enable the loading animation. Set to false if you do not want the loading screen or have your own custom one.
+		LoadingTitle = "Cosmix Scripts", -- Header for loading screen
+		LoadingSubtitle = "By FireRed", -- Subtitle for loading screen
+	
+		ConfigSettings = {
+			RootFolder = nil, -- The Root Folder Is Only If You Have A Hub With Multiple Game Scripts and u may remove it. DO NOT ADD A SLASH
+			ConfigFolder = "Big Hub" -- The Name Of The Folder Where Luna Will Store Configs For This Script. DO NOT ADD A SLASH
+		},
+	
+		KeySystem = false, -- As Of Beta 6, Luna Has officially Implemented A Key System!
+		KeySettings = {
+			Title = "Luna Example Key",
+			Subtitle = "Key System",
+			Note = "Best Key System Ever! Also, Please Use A HWID Keysystem like Pelican, Luarmor etc. that provide key strings based on your HWID since putting a simple string is very easy to bypass",
+			SaveInRoot = false, -- Enabling will save the key in your RootFolder (YOU MUST HAVE ONE BEFORE ENABLING THIS OPTION)
+			SaveKey = true, -- The user's key will be saved, but if you change the key, they will be unable to use your script
+			Key = {"Example Key"}, -- List of keys that will be accepted by the system, please use a system like Pelican or Luarmor that provide key strings based on your HWID since putting a simple string is very easy to bypass
+			SecondAction = {
+				Enabled = true, -- Set to false if you do not want a second action,
+				Type = "Link", -- Link / Discord.
+				Parameter = "" -- If Type is Discord, then put your invite link (DO NOT PUT DISCORD.GG/). Else, put the full link of your key system here.
+			}
+		}
+	})
+
+	Luna:Notification({ 
+		Title = "Warning",
+		Icon = "notifications_active",
+		ImageSource = "Material",
+		Content = "This Game Is Not Supported Loading Universal Version !"
+	})
+
+	local Tab = Window:CreateTab({
+		Name = "Main Tab",
+		Icon = "house",
+		ImageSource = "Material",
+		ShowTitle = true -- This will determine whether the big header text in the tab will show
+	})
+
+	local Slider = Tab:CreateSlider({
+		Name = "WalkSpeed Slider",
+		Range = {17, 300},
+		Increment = 5,
+		CurrentValue = 16,
+		Callback = function(Value)
+			local player = game.Players.LocalPlayer
+			local character = player.Character or player.CharacterAdded:Wait()
+			
+			if character then
+				local humanoid = character:FindFirstChild("Humanoid")
+				if humanoid then
+					humanoid.WalkSpeed = Value
+				end
+			end
+		end
+	}, "WalkSpeedSlider")
+	
+	
+	local JumpPowerSlider = Tab:CreateSlider({
+		Name = "JumpPower Slider",
+		Range = {50, 200},
+		Increment = 10,
+		CurrentValue = 50,
+		Callback = function(Value)
+			local player = game.Players.LocalPlayer
+			local character = player.Character or player.CharacterAdded:Wait()
+	
+			if character then
+				local humanoid = character:FindFirstChild("Humanoid")
+				if humanoid then
+					humanoid.JumpPower = Value
+				end
+			end
+		end
+	}, "JumpPowerSlider")
+	
+	
+	local Toggle = Tab:CreateToggle({
+		Name = "Toggle ESP",
+		Description = "Enable or disable ESP",
+		CurrentValue = false,
+		Callback = function(Value)
+			getgenv().ESPEnabled = Value
+			if getgenv().ESPEnabled then
+				spawn(function()
+					while getgenv().ESPEnabled do
+						for _, player in ipairs(game.Players:GetPlayers()) do
+							if player ~= game.Players.LocalPlayer and player.Character then
+								local espBox = player.Character:FindFirstChild("ESPBox")
+								if not espBox then
+									espBox = Instance.new("BoxHandleAdornment")
+									espBox.Name = "ESPBox"
+									espBox.Size = Vector3.new(4, 6, 4)
+									espBox.Adornee = player.Character:FindFirstChild("HumanoidRootPart")
+									espBox.AlwaysOnTop = true
+									espBox.ZIndex = 5
+									espBox.Color3 = Color3.new(1, 0, 0)
+									espBox.Parent = player.Character
+								end
+							end
+						end
+						wait(0.5)
+					end
+				end)
+			else
+				for _, player in ipairs(game.Players:GetPlayers()) do
+					if player.Character then
+						for _, adornment in ipairs(player.Character:GetChildren()) do
+							if adornment:IsA("BoxHandleAdornment") and adornment.Name == "ESPBox" then
+								adornment:Destroy()
+							end
+						end
+					end
+				end
+			end
+		end
+	})
+	
+	local Button = Tab:CreateButton({
+		Name = "Fly - E to Activate",
+		Description = nil, -- Creates A Description For Users to know what the button does (looks bad if you use it all the time),
+			Callback = function()
+				loadstring(game:HttpGet("https://pastefy.app/2fwf9UMf/raw"))()
+			end
+	})
+	
+	local Button = Tab:CreateButton({
+		Name = "Noclip - N to Activate",
+		Description = nil, -- Creates A Description For Users to know what the button does (looks bad if you use it all the time),
+			Callback = function()
+				loadstring(game:HttpGet("https://pastefy.app/PE10yFqm/raw"))()
+			end
+	})
+	
+	local Toggle = Tab:CreateToggle({
+		Name = "Prevent Game Teleportaion",
+		Description = "Bypasses Any Type Of teleportation if you enter a restricted area.",
+		CurrentValue = false,
+		Callback = function(Value)
+			if Value then
+				startDetection()
+			else
+				stopDetection()
+			end
+		end
+	}, "PreventTeleportToggle")
+	
+	local player = game.Players.LocalPlayer
+	local character = player.Character or player.CharacterAdded:Wait()
+	local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+	local humanoid = character:WaitForChild("Humanoid")
+	local camera = workspace.CurrentCamera
+	local maxAllowedDistance = 20
+	local checkInterval = 0.1
+	local lastPosition = humanoidRootPart.Position
+	local lastOrientation = humanoidRootPart.CFrame.LookVector
+	local detectionRunning = false
+	local detectionConnection
+	
+	
+	function startDetection()
+		if detectionRunning then return end
+		detectionRunning = true
+		lastPosition = humanoidRootPart.Position
+	
+		detectionConnection = game:GetService("RunService").Heartbeat:Connect(function()
+		   
+			character = player.Character or player.CharacterAdded:Wait()
+			humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+			humanoid = character:FindFirstChild("Humanoid")
+			
+			if humanoidRootPart and humanoid then
+				local currentPosition = humanoidRootPart.Position
+				local distanceMoved = (currentPosition - lastPosition).Magnitude
+	
+				if distanceMoved > maxAllowedDistance then
+					
+					warn("Teleportation detected! Resetting position.")
+					
+					
+					humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+					
+					
+					humanoidRootPart.CFrame = CFrame.new(lastPosition) * CFrame.Angles(0, humanoidRootPart.CFrame:ToEulerAnglesYXZ())
+					
+					
+					camera.CFrame = CFrame.new(camera.CFrame.Position, camera.CFrame.Position + lastOrientation)
+					
+					task.delay(0.1, function()
+						humanoid:ChangeState(Enum.HumanoidStateType.Running)
+					end)
+				else
+					lastPosition = currentPosition
+					lastOrientation = humanoidRootPart.CFrame.LookVector
+				end
+			end
+		end)
+	end
+	
+	function stopDetection()
+		if not detectionRunning then return end
+		detectionRunning = false
+		if detectionConnection then
+			detectionConnection:Disconnect()
+			detectionConnection = nil
+		end
+	end
+
+	local Tab = Window:CreateTab({
+		Name = "Aimbot",
+		Icon = "loupe",
+		ImageSource = "Material",
+		ShowTitle = true -- This will determine whether the big header text in the tab will show
+	})
+	
+	local Button = Tab:CreateButton({
+		Name = "Turn On Aimbot - Q",
+		Description = nil, -- Creates A Description For Users to know what the button does (looks bad if you use it all the time),
+			Callback = function()
+				loadstring(game:HttpGet("https://pastefy.app/Jj0nMC7u/raw"))()
+			end
+	})
+	
+	local Slider = Tab:CreateSlider({
+		Name = "Aimbot Sensitivity",
+		Range = {0, 100},
+		Increment = 1,
+		CurrentValue = 50,
+		Callback = function(Value)
+			getgenv().AimbotSensitivity = Value / 100
+		end
+	})
+end
